@@ -210,4 +210,68 @@
 		</plugins>
 
 	</build>
+
+    <profiles>
+        <!-- testing Dockerfile image  -->
+        <profile>
+            <id>docker-test</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jolokia</groupId>
+                        <artifactId>docker-maven-plugin</artifactId>
+                        <version>0.11.2</version>
+                        <configuration>
+                            <dockerHost>http://${env.PNC_DOCKER_IP}:2375</dockerHost>
+                            <sourceDirectory>src/main/resources/isolatedDockerConfiguration</sourceDirectory>
+                            <images>
+                                <image>
+                                    <name>${env.PNC_DOCKER_IMAGE_ID}</name>
+                                    <alias>pnc-jenkins</alias>
+                                    <build>
+                                        <volumes>
+                                            <volume>/var/jenkins_home</volume>
+                                        </volumes>
+                                    </build>
+                                    <run>
+                                        <privileged>true</privileged>
+                                        <ports>
+                                            <port>${env.PNC_JENKINS_PORT}:8080</port>
+                                        </ports>
+                                        <wait>
+                                          <url>${env.PNC_JENKINS_URL}:${env.PNC_JENKINS_PORT}</url>
+                                          <time>10000</time>
+                                          <shutdown>500</shutdown>
+                                        </wait>
+                                    </run>
+                                </image>
+                            </images>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>start</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <!-- "build" should be used to create the images with the artefacts -->
+                                    <goal>build</goal>
+                                    <goal>start</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>stop</id>
+                                <phase>post-integration-test</phase>
+                                <goals>
+                                    <goal>stop</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                </plugins>
+
+            </build>
+        </profile>
+    
+    </profiles>
+    
 </project>
