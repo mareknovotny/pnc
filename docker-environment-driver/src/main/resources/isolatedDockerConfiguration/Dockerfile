@@ -94,6 +94,11 @@ RUN curl -sSL http://archive.apache.org/dist/maven/maven-3/$MAVEN_VERSION/binari
 RUN echo "export M2_HOME=/usr/share/maven" >> /etc/profile
 RUN mkdir /root/.m2
 
+# all below env variables are used in Maven settings.xml to set Maven proxy for all requests
+#ENV isHttpActive true # false value deactivates the proxy for maven
+#ENV proxyIPAddress 10.40.3.134 # IP address of proxy server or DNS resolvabla hostname
+#ENV proxyPort 3128 # port on which proxy server listens
+
 # Could be used for images based on this Docker image to specify default mirrored repository if different from Maven Central below
 ADD settings.xml /usr/share/maven/conf/settings.xml
 
