@@ -145,4 +145,65 @@
     <!-- /Test dependencies -->
   </dependencies>
 
+  <profiles>
+  	<profile>
+  		<id>docker</id>
+  		<build>
+  			<pluginManagement>
+  				<plugins>
+  					<plugin>
+  						<groupId>org.jolokia</groupId>
+  						<artifactId>docker-maven-plugin</artifactId>
+  						<version>0.11.5</version>
+  					</plugin>
+  				</plugins>
+  			</pluginManagement>
+  			<plugins>
+  				<plugin>
+					<groupId>org.jolokia</groupId>
+					<artifactId>docker-maven-plugin</artifactId>
+					<configuration>
+						<dockerHost>http://${env.PNC_DOCKER_IP}:2375</dockerHost>
+						<images>
+							<image>
+								<name>pnc-builder-${project.version}</name>
+							</image>
+						</images>
+						<build>
+							<assembly>
+								<dockerFileDir>src/main/docker</dockerFileDir>
+							</assembly>
+						</build>
+					</configuration>
+					<!--  executions>
+						<execution>
+							<id>build</id>
+							<phase>compile</phase>
+							<goals>
+								<goal>build</goal>
+							</goals>
+						</execution>
+					</executions-->
+				</plugin>
+  			</plugins>
+  		</build>
+  	</profile>
+  	<profile>
+      <id>spotify</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>com.spotify</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <version>0.2.9</version>
+            <configuration>
+              <imageName>pnc-builder-v${project.version}</imageName>
+              <dockerDirectory>src/main/docker/pnc-builder</dockerDirectory>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+  
 </project>

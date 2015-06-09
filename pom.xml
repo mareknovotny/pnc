@@ -1079,6 +1079,34 @@
                     <ignore></ignore>
                   </action>
                 </pluginExecution>
+                <pluginExecution>
+                	<pluginExecutionFilter>
+                		<groupId>org.codehaus.mojo</groupId>
+                		<artifactId>properties-maven-plugin</artifactId>
+                		<versionRange>[1.0-alpha-2,)</versionRange>
+                		<goals>
+                			<goal>read-project-properties</goal>
+                		</goals>
+                	</pluginExecutionFilter>
+                	<action>
+                		<ignore></ignore>
+                	</action>
+                </pluginExecution>
+                <pluginExecution>
+                	<pluginExecutionFilter>
+                		<groupId>org.jacoco</groupId>
+                		<artifactId>jacoco-maven-plugin</artifactId>
+                		<versionRange>
+                			[0.7.1.201405082137,)
+                		</versionRange>
+                		<goals>
+                			<goal>prepare-agent</goal>
+                		</goals>
+                	</pluginExecutionFilter>
+                	<action>
+                		<ignore></ignore>
+                	</action>
+                </pluginExecution>
               </pluginExecutions>
             </lifecycleMappingMetadata>
           </configuration>
