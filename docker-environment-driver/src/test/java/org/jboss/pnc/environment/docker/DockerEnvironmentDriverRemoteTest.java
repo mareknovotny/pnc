@@ -17,7 +17,22 @@
  */
 package org.jboss.pnc.environment.docker;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.Socket;
+import java.util.Map;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.logging.Logger;
+
+import javax.inject.Inject;
 
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
@@ -46,16 +61,8 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
-import javax.inject.Inject;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.Socket;
-import java.util.Map;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-import java.util.logging.Logger;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Unit tests for DockerEnnvironmentDriver
@@ -94,7 +101,6 @@ public class DockerEnvironmentDriverRemoteTest {
         final WebArchive testedEjb = ShrinkWrap
                 .create(WebArchive.class)
                 .addAsWebInfResource(EmptyAsset.INSTANCE, "beans.xml")
-                .addAsResource("jenkins-maven-config.xml")
                 .addAsResource("pnc-config.json")
                 .addPackage(RemoteTest.class.getPackage())
                 .addPackages(true, DockerEnvironmentDriver.class.getPackage());
@@ -155,6 +161,7 @@ public class DockerEnvironmentDriverRemoteTest {
             try {
                 testRunningContainer(runningEnv, true,
                         "Environment wasn't successfully built.");
+                testRunningEnvContainer(runningEnv, true, "Environment wasn't set up correctly.");
 
                 // Destroy container
                 dockerEnvDriver.destroyEnvironment(runningEnv.getId());
@@ -178,8 +185,7 @@ public class DockerEnvironmentDriverRemoteTest {
         startedEnv.monitorInitialization(onComplete, onError);
         mutex.tryAcquire(MAX_TEST_DURATION, TimeUnit.SECONDS);
     }
-
-
+    
     /**
      * Checks if container was started and the services are on.
      *
@@ -216,6 +222,62 @@ public class DockerEnvironmentDriverRemoteTest {
 
         // Test it the SSH port is opened
         assertEquals(baseErrorMsg + " Test opened SSH port", shouldBeRunning, testOpenedPort(sshPort));
+    }
+    
+    private void testRunningEnvContainer(final DockerRunningEnvironment runningEnv,
+            final boolean shouldBeRunning,
+            final String baseErrorMsg) {
+        final int sshPort = runningEnv.getSshPort();
+        final String containerId = runningEnv.getId();
+
+        // Test if the container is running
+        try {
+            HttpUtils.testResponseHttpCode(200, dockerControlEndpoint + "/containers/" + containerId
+                    + "/json");
+
+            String containerJSON = HttpUtils.processGetRequest(dockerControlEndpoint + "/containers/" + containerId + "/json");
+            log.info(containerJSON);
+            Map<String,Object> jsonMap = getJSONFromString(containerJSON);
+            
+            log.info(jsonMap.get("proxyIPAddress").toString());
+            log.info(jsonMap.get("proxyPort").toString());
+            log.info(jsonMap.get("isHttpActive").toString());
+            
+            assertTrue("proxyIPAddress env variable is not set!", jsonMap.get("proxyIPAddress").toString().equals("10.40.3.134"));
+            assertTrue("proxyPort env variable is not set!", jsonMap.get("proxyPort").toString().equals("3128"));
+            assertTrue("isHttpActive env variable is not set!", jsonMap.get("isHttpActive").toString().equals("false"));
+            
+            assertEquals(baseErrorMsg + " Container is running", shouldBeRunning, true);
+        } catch (final Exception e) {
+            assertEquals(baseErrorMsg + " Container is not running", shouldBeRunning, false);
+        }
+
+        // Test if Jenkins is running
+        try {
+            HttpUtils.testResponseHttpCode(200, runningEnv.getJenkinsUrl());
+            if (!shouldBeRunning) {
+                fail("Jenkins is running, but should be down");
+            }
+        } catch (final Exception e) {
+            if (shouldBeRunning) {
+                fail("Jenkins wasn't started successully");
+            }
+        }
+
+        // Test it the SSH port is opened
+        assertEquals(baseErrorMsg + " Test opened SSH port", shouldBeRunning, testOpenedPort(sshPort));
+    }
+    
+    static private Map<String,Object> getJSONFromString(String str){
+        Map<String,Object> result = null;
+        try {
+            result = new ObjectMapper().readValue(str, Map.class);    
+        } catch (JsonMappingException jme){
+            log.severe(jme.getLocalizedMessage());
+        } catch (IOException ioe){
+            log.severe(ioe.getLocalizedMessage());
+        }
+        return result;    
     }
 
     private void destroyEnvironmentWithReport(String id) {
